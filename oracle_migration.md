@@ -1,15 +1,42 @@
 # Oracle Cloud VPS Migration — Always Free Tier
 
-> **Status:** Template — fill in inventory results from `oracle_inventory.sh`
+> **Status:** Partially complete — run `oracle_inventory.sh` on server and paste results to finish
 > **Generated:** 2026-06-03
 > **Trigger:** $48.66 invoice for E5 paid compute shape
+
+## Known Instance Details
+
+| Field | Value |
+|-------|-------|
+| **Hostname** | shocknode |
+| **Public IP** | 163.192.204.116 |
+| **SSH user** | ubuntu |
+| **Current shape** | VM.Standard.E5.Flex (PAID) |
+| **Current specs** | 1 OCPU, 12 GB RAM |
+| **OS** | Ubuntu 20.04 (Canonical) |
+| **Region** | us-chicago-1 |
+| **Availability Domain** | AD-1 |
+| **OCID** | ocid1.instance.oc1.us-chicago-1.anxxeljs2smskeyc5lc5rzc3jspfpnxvs6qtzbirlzz6sxis2mcncq4wcuaq |
+| **Launched** | 2026-02-25 |
+| **Compartment** | rsikora28 (root) |
+
+> **Shape decision: VM.Standard.A1.Flex is required.**
+> The current instance uses 12 GB RAM. VM.Standard.E2.1.Micro has only 1 GB RAM
+> and cannot replace this workload. A1.Flex (free tier: up to 4 OCPU / 24 GB RAM)
+> is the only viable Always Free option.
 
 ---
 
 ## 1. Service Inventory
 
-> Run `bash oracle_inventory.sh | tee ~/server_inventory.txt` on the server, then
-> fill in the table below.
+> Run the commands below from your **local machine**, then paste `server_inventory.txt` here.
+>
+> ```bash
+> # From your local machine (replace YOUR_KEY with your actual key path):
+> scp -i ~/.ssh/YOUR_KEY oracle_inventory.sh ubuntu@163.192.204.116:~/
+> ssh -i ~/.ssh/YOUR_KEY ubuntu@163.192.204.116 "sudo bash ~/oracle_inventory.sh" \
+>   | tee server_inventory.txt
+> ```
 
 ### 1.1 Systemd Services
 
