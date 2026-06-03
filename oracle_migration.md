@@ -1,7 +1,7 @@
 # Oracle Cloud VPS Migration — Always Free Tier
 
-> **Status:** Partially complete — run `oracle_inventory.sh` on server and paste results to finish
-> **Generated:** 2026-06-03
+> **Status:** Stack deployed — migration to A1.Flex pending. Outstanding: proxy hosts, Haven DB fix, SSL certs.
+> **Last updated:** 2026-06-03
 > **Trigger:** $48.66 invoice for E5 paid compute shape
 
 ## Known Instance Details
@@ -29,44 +29,88 @@
 
 ## 1. Service Inventory
 
-> Run the commands below from your **local machine**, then paste `server_inventory.txt` here.
->
-> ```bash
-> # From your local machine (replace YOUR_KEY with your actual key path):
-> scp -i ~/.ssh/YOUR_KEY oracle_inventory.sh ubuntu@163.192.204.116:~/
-> ssh -i ~/.ssh/YOUR_KEY ubuntu@163.192.204.116 "sudo bash ~/oracle_inventory.sh" \
->   | tee server_inventory.txt
-> ```
+> **Inventory populated from Codex session logs (2026-02-26).**
+> Full forensic audit still available via `oracle_inventory.sh`.
 
-### 1.1 Systemd Services
+### 1.1 Docker Compose Projects
 
-| Service | Enabled | Running | Description / Purpose |
-|---------|---------|---------|----------------------|
-| _fill from `systemctl list-unit-files`_ | | | |
+| Path | Services | Status |
+|------|----------|--------|
+| `/home/ubuntu/docker/shared-db/` | shared-postgres (pg16), shared-mariadb (mariadb11) | Running |
+| `/home/ubuntu/docker/shared-cache/` | shared-redis | Running |
+| `/home/ubuntu/docker/openappsec-npm/` | appsec-nginx-proxy-manager, appsec-agent, appsec-smartsync, appsec-shared-storage, appsec-tuning-svc, appsec-db | Running (fresh install) |
+| `/home/ubuntu/docker/nextcloud/` | nextcloud (LSIO) | Running — needs first-run DB setup |
+| `/home/ubuntu/docker/dev-identity/` | gitea, keycloak, pocketbase | Running (keycloak password fixed) |
+| `/home/ubuntu/docker/automation/` | n8n, rsshub, rsshub-browserless | Running |
+| `/home/ubuntu/docker/boards-crm/` | wekan, wekan-db (mongo7), twenty-server, twenty-worker | Running |
+| `/home/ubuntu/docker/docs/` | bookstack (LSIO), privatebin | Running (APP_KEY generated) |
+| `/home/ubuntu/docker/home-lifestyle/` | traggo, homebox, weddingshare, lubelogger, haven, my-idlers, karakeep, karakeep-chrome, karakeep-meili | Running (**Haven has DB issues**) |
+| `/home/ubuntu/homarr/` | homarr | Running (pre-existing, untouched) |
+| `/home/ubuntu/paperless/` (or similar) | paperless-ngx stack | Running (pre-existing, untouched) |
 
-### 1.2 Docker Containers
+### 1.2 Docker Containers — Known
 
-| Container Name | Image | Status | Exposed Ports | Purpose |
-|----------------|-------|--------|---------------|---------|
-| _fill from `docker ps -a`_ | | | | |
+| Container | Image | Port | Subdomain | Status |
+|-----------|-------|------|-----------|--------|
+| appsec-nginx-proxy-manager | ghcr.io/openappsec/nginx-proxy-manager-attachment | 80,443,81 | waf.robbiemed.org | Running |
+| shared-postgres | postgres:16 | internal | — | Running |
+| shared-mariadb | mariadb:11 | internal | — | Running |
+| shared-redis | redis:alpine | internal | — | Running |
+| nextcloud | lscr.io/linuxserver/nextcloud | 443 | cloud.robbiemed.org | Running (needs DB setup) |
+| gitea | docker.gitea.com/gitea | 3000, 2222 | git.robbiemed.org | Running |
+| keycloak | quay.io/keycloak/keycloak | 8080 | auth.robbiemed.org | Running |
+| pocketbase | ghcr.io/muchobien/pocketbase | 8090 | db.robbiemed.org | Running |
+| n8n | docker.n8n.io/n8nio/n8n | 5678 | flow.robbiemed.org | Running |
+| rsshub | diygod/rsshub | 1200 | rss.robbiemed.org | Running |
+| wekan | quay.io/wekan/wekan | 8080 | boards.robbiemed.org | Running |
+| wekan-db | mongo:7 | internal | — | Running |
+| twenty-server | twentycrm/twenty | 3000 | crm.robbiemed.org | Running |
+| twenty-worker | twentycrm/twenty | — | — | Running |
+| bookstack | lscr.io/linuxserver/bookstack | 80 | docs.robbiemed.org | Running |
+| privatebin | privatebin/nginx-fpm-alpine | 8080 | bin.robbiemed.org | Running |
+| traggo | traggo/server | 3030 | time.robbiemed.org | Running (login: admin/admin) |
+| homebox | ghcr.io/sysadminsmedia/homebox | 7745 | inventory.robbiemed.org | Running |
+| weddingshare | cirx08/wedding_share | 5000 | wedding.robbiemed.org | Running |
+| lubelogger | ghcr.io/hargata/lubelogger | 8080 | auto.robbiemed.org | Running |
+| haven | ghcr.io/havenweb/haven | 3000 | haven.robbiemed.org | **Restarting — DB password mismatch** |
+| my-idlers | ghcr.io/cp6/my-idlers | 8000 | idlers.robbiemed.org | Running (DB migrated) |
+| karakeep | ghcr.io/karakeep-app/karakeep | 3000 | kara.robbiemed.org | Running |
+| karakeep-chrome | gcr.io/zenika-hub/alpine-chrome | internal | — | Running |
+| karakeep-meili | getmeili/meilisearch | internal | — | Running |
 
-### 1.3 Docker Compose Projects
+### 1.3 Open Ports (known)
 
-| File Path | Services | Notes |
-|-----------|----------|-------|
-| _fill from `find / -name docker-compose.yml`_ | | |
+| Port | Service | Public |
+|------|---------|--------|
+| 22 | SSH | Yes |
+| 80 | NPM HTTP | Yes |
+| 443 | NPM HTTPS | Yes |
+| 81 | NPM Admin UI | Yes (should restrict to VPN/IP) |
+| 2222 | Gitea SSH | Yes (optional) |
 
-### 1.4 Open Ports
+### 1.4 Secrets File Location
 
-| Port | Protocol | Process | Public? |
-|------|----------|---------|---------|
-| _fill from `ss -tlnp`_ | | | |
+```
+/home/ubuntu/docker/SECRETS-20260226T034229Z.md
+```
 
-### 1.5 Web Server Virtual Hosts
+All generated passwords are in this file. **Back this up off-server immediately.**
 
-| Domain | Backend | SSL | Config File |
-|--------|---------|-----|-------------|
-| _fill from nginx/caddy config_ | | | |
+### 1.5 Databases
+
+**PostgreSQL** (`shared-postgres`):
+- `gitea` / `gitea_user`
+- `keycloak` / `keycloak_user`
+- `n8n` / `n8n_user`
+- `twenty` / `twenty_user`
+- `haven` / `haven_user` ⚠️ password needs re-sync
+
+**MariaDB** (`shared-mariadb`):
+- `nextcloud` / `nc_user`
+- `bookstack` / `bookstack_user`
+- `myidlers` / `myidlers_user`
+
+**MongoDB** (`wekan-db`): Wekan database (no shared pool)
 
 ### 1.6 Cron Jobs
 
